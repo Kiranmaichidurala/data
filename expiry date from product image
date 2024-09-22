@@ -1,0 +1,17 @@
+pip install --user paddleocr
+
+from paddleocr import PaddleOCR
+import re
+ocr = PaddleOCR(use_angle_cls=True, lang='en')
+image_path = '/DDResult2.png'
+
+ocr_results = ocr.ocr(image_path)
+date_pattern = r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})|(\d{2,4}[/-]\d{1,2}[/-]\d{1,2})\b"
+
+for line in ocr_results:
+    for word_info in line:
+        text = word_info[1][0]
+        print("Detected Text:", text)
+        match = re.search(date_pattern, text)
+        if match:
+            print("Expiry Date Detected:", match.group())
