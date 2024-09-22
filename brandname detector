@@ -1,0 +1,161 @@
+!pip install seaborn scikit-learn
+!pip install requests
+import os
+import requests
+
+from zipfile import ZipFile
+
+zip_file_path='C:\\Users\\kiran\\Onedrive\\Desktop\\ocr dataset.zip'
+extract_to_path='C:\\Users\\kiran\\Onedrive\\Desktop\\ocr dataset'
+print(os.listdir(extract_to_path))
+
+!pip install torch torchvision torchaudio
+
+import torch
+from torchvision import transforms
+from PIL import Image
+import torch.nn as nn
+
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader 
+transform = transforms.Compose([
+    transforms.Resize((64, 64)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+])
+dataset = datasets.ImageFolder(root='C:\\Users\\kiran\\OneDrive\\Desktop\\ocr dataset', transform=transform)
+train_size = int(0.8 * len(dataset))
+test_size = len(dataset) - train_size
+train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+print("data preprocessing is done")
+
+import pandas as pd
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils.data import DataLoader, random_split
+from torchvision import transforms, datasets
+import os
+
+# Define CNN model for brand name classification
+class BrandDetectionCNN(nn.Module):
+    def __init__(self, num_brands):
+        super(BrandDetectionCNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)  # Conv layer 1
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)  # Conv layer 2
+        self.pool = nn.MaxPool2d(2, 2)  # Max pooling layer
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)  # Fully connected layer
+        self.fc2 = nn.Linear(128, num_brands)  # Output layer for brand classification
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))  # Apply conv1, relu, and pooling
+        x = self.pool(F.relu(self.conv2(x)))  # Apply conv2, relu, and pooling
+        x = x.view(-1, 64 * 7 * 7)  # Flatten for FC layer
+        x = F.relu(self.fc1(x))  # Fully connected layer
+        x = self.fc2(x)  # Output for brand name classification
+        return x
+transform = transforms.Compose([
+    transforms.Resize((28, 28)),  # Resize to 28x28
+    transforms.Grayscale(num_output_channels=1),  # Convert to grayscale
+    transforms.ToTensor(),  # Convert image to tensor
+    transforms.Normalize(mean=[0.5], std=[0.5])  # Normalize
+])
+
+dataset_path = 'C:\\Users\\kiran\\Onedrive\\Desktop\\ocr dataset'
+dataset = datasets.ImageFolder(root=dataset_path, transform=transform)
+
+train_size = int(0.8 * len(dataset))
+test_size = len(dataset) - train_size
+train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+num_brands = len(dataset.classes)
+
+model = BrandDetectionCNN(num_brands)
+print("Model created")
+
+criterion = nn.CrossEntropyLoss()  # For multi-class classification
+optimizer = optim.Adam(model.parameters(), lr=0.001)  # Adam optimizer
+
+num_epochs = 10
+for epoch in range(num_epochs):
+    running_loss = 0.0
+    for batch_images, batch_labels in train_loader:
+        optimizer.zero_grad()
+        outputs = model(batch_images)
+        loss = criterion(outputs, batch_labels)
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+    print(f'Epoch {epoch+1}/{num_epochs}, Loss: {running_loss/len(train_loader)}')
+
+print('Training finished.')
+
+import torch
+from PIL import Image
+import torchvision.transforms as transforms
+
+transform = transforms.Compose([
+    transforms.Resize((28, 28)),  # Resize to 28x28
+    transforms.Grayscale(num_output_channels=1),  # Convert to grayscale
+    transforms.ToTensor(),  # Convert image to tensor
+    transforms.Normalize(mean=[0.5], std=[0.5])  # Normalize
+])
+
+def predict_brand(image_path, model, class_to_idx):
+    """
+    Predict the brand of an image using the trained model.
+    
+    Args:
+    - image_path (str): Path to the image to be predicted.
+    - model (nn.Module): The trained model.
+    - class_to_idx (dict): A dictionary mapping class names to indices.
+    
+    Returns:
+    - str: The predicted brand name.
+    """
+    # Handle potential U
+    try:
+        image = Image.open(image_path)
+    except UnicodeDecodeError as e:
+        return f"Unicode error loading image: {e}"
+    except Exception as e:
+        return f"Error loading image: {e}"
+
+    image = transform(image).unsqueeze(0)
+
+    model.eval()
+
+    with torch.no_grad():
+        try:
+            outputs = model(image)
+            _, predicted_idx = torch.max(outputs, 1)
+        except Exception as e:
+            return f"Error during model prediction: {e}"
+
+    idx_to_class = {v: k for k, v in class_to_idx.items()}
+    
+
+    print(f"Predicted index: {predicted_idx.item()}")
+    print(f"Index to class mapping: {idx_to_class}")
+
+    predicted_idx = predicted_idx.item() 
+    if predicted_idx not in idx_to_class:
+        return f"Prediction index {predicted_idx} not in idx_to_class"
+
+    predicted_brand = idx_to_class[predicted_idx]
+    
+    return predicted_brand
+
+class_to_idx = {'test1': 0, 'train1': 1}
+
+
+image_path = r"C:\\Users\\kiran\\OneDrive\\Desktop\\0002.png.png"  # Use raw string or forward slashes
+
+predicted_brand = predict_brand(image_path, model, class_to_idx)
+print(f'Predicted brand: {predicted_brand}')
